@@ -34,9 +34,18 @@ Houghton and Kreuz [1], (equation (9)).
 
 `u, v` are expected to be **sorted** 1D vectors that only list the times of the spikes.
 
+```math
+\begin{aligned}
+    [d(\mathbf{u}, \mathbf{v} ; \tau)]^{2} = & \frac{n_{1}+n_{2}}{2}+\sum_{i} \sum_{j | u_{i} ; u_{j}} e^{-\left(u_{i}-u_{j}\right) / \tau}
+    + \sum_{i} \sum_{j | v_{i}>v_{j}} e^{-\left(v_{i}-v_{j}\right) / \tau} \\
+    & - \sum_{i} \sum_{j | u_{i}>v_{j}} e^{-\left(u_{i}-v_{j}\right) / \tau}
+    - \sum_{i} \sum_{j | v_{i}>u_{j}} e^{-\left(v_{i}-u_{j}\right) / \tau} 
+\end{aligned}
+```
+
 [1] : Houghton & Kreuz (2012), [On the efficient calculation of van Rossum distances](https://doi.org/10.3109/0954898X.2012.673048)
 """
-function vanRossum_fast(u, v, τ)
+function vanRossum_fast(u::AbstractVector{T1}, v::AbstractVector{T2}, τ) where {T1, T2}
     @assert issorted(u) && issorted(v)
 
     nu, nv = length(u), length(v)
@@ -49,18 +58,31 @@ function vanRossum_fast(u, v, τ)
     return sqrt( (nu + nv)/2 + Au + Av - Buv - Bvu )
 end
 
-"Create the markage vector, Eq. (6) in the Houghton paper."
-function markage_vector(u, τ)
-    m = zeros(length(u))
+"""
+    markage_vector(u, τ)
+Create the markage vector, Eq. (6) in the Houghton paper.
+"""
+function markage_vector(u::AbstractVector{T}, τ) where T
+    m = zeros(T, length(u))
     @inbounds @fastmath for i in 2:length(u)
         m[i] = (m[i-1] + 1.0) * exp(-(u[i] - u[i-1])/τ)
     end
     return m
 end
 
-"Calculate Eq. (12) of the Houghton paper."
+"""
+    cross_term(u, v, mv, τ)
+Calculate Eq. (12) of the Houghton paper.
+```math
+\sum_{i} \sum_{j | u_{i}>v_{j}} e^{-\left(u_{i}-v_{j}\right) / \tau} 
+= 
+\sum_{i} e^{-\left(u_{i}-v_{J(i)}\right) / \tau}\left[1+m_{J(i)}(\mathbf{v})\right]
+```
+"""
 function cross_term(u, v, mv, τ)
-    s = 0.0; L = length(v); Jprev = 1
+    s = 0.0 
+    L = length(v) 
+    Jprev = 1
     @inbounds @fastmath for i in 1:length(u)
         @inbounds J = findlast(j -> v[j] < u[i], Jprev:L)
         isnothing(J) && continue # this happens at first and last index
