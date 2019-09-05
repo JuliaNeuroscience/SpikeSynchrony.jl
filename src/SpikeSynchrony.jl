@@ -4,13 +4,16 @@ export vanRossum, vanRossum_fast
 
 """
     vanRossum(u, v, τ)
-Calculate the van Rossum distance between two spike trains `u, v` with
+Calculate the van Rossum distance [1] between two spike trains `u, v` with
 time parameter `τ` using the exact analytic expression, equation (5)
-of [1].
+of [2]. Notice that our normalization is *twice* as much as the original
+paper (1.0 instead of 0.5).
 
 `u, v` are expected to be 1D vectors that only list the times of the spikes.
 
-[1] : Houghton & Kreuz (2012), [On the efficient calculation of van Rossum distances](https://doi.org/10.3109/0954898X.2012.673048)
+[1] : van Rossum (2001), [A novel spike distance](https://doi.org/10.1162/089976601300014321)
+
+[2] : Houghton & Kreuz (2012), [On the efficient calculation of van Rossum distances](https://doi.org/10.3109/0954898X.2012.673048)
 """
 vanRossum(u, v, τ) = sqrt(vR_ds(u, u, τ) + vR_ds(v, v, τ) - 2vR_ds(u, v, τ))
 function vR_ds(u, v, τ) # vanRossum double sum
