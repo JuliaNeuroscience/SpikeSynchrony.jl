@@ -32,12 +32,10 @@ function SPIKE_distance_profile(y1::AbstractVector{T}, y2::AbstractVector{T};
     y2 = vcat(t0, y2, t_end)
     # initialize appropriate data structures:
     tvec, indices = _initialize_spike_data(y1, y2)
-    # S are the values of S(t), which is a piecewise linear function
+    # S are the values of S(t), which is a continuous piecewise linear function
     S = zeros(Float64, length(tvec))
     i1, i2 = 1, 1 # indices of the spikes of two spike trains
-    # The following loop calculates the value of S at the k-th overall spike
-    # when all spikes are sorted (values at k=1, length(t) are = 0)
-    for k in 2:length(tvec)-1
+    for k in 2:length(tvec)-1 # loop to calculate S[k]
         t = tvec[k]
         # find out which indices to increment (where is current spike from)
         if indices[k] == 3 # both trains share current spike
@@ -52,13 +50,13 @@ function SPIKE_distance_profile(y1::AbstractVector{T}, y2::AbstractVector{T};
         tP1 = y1[i1]; tP2 = y2[i2]
         tF1 = y1[i1+1]; tF2 = y2[i2+1]
         xISI1, xISI2 = tF1 - tP1, tF2 - tP2
+        xP1 = t - tP1; xP2 = t - tP2
         xF1 = tF1 - t; xF2 = tF2 - t
         # Find Δt:
         ΔtP1 = minimum_Δt(tP1, y2, i2); ΔtP2 = minimum_Δt(tP2, y1, i1)
         ΔtF1 = minimum_Δt(tF1, y2, i2); ΔtF2 = minimum_Δt(tF2, y1, i1)
-        # Compute S1, S2
+        # Compute S1, S2, S[k]
         S1 = (ΔtP1*xF1 + ΔtF1*xP1)/xISI1; S2 = (ΔtP2*xF2 + ΔtF2*xP2)/xISI2
-        # Compute S
         S[k] = 0.5*(S1*xISI2 + S2*xISI1)/(xISI1 + xISI2)^2
     end
     return tvec, S
@@ -115,7 +113,7 @@ Calculate the SPIKE distance ``D_S``, which is the average of
 [`SPIKE_distance_profile`](@ref).
 """
 function SPIKE_distance(y1, y2; kwargs...)
-    t, S = SPIKE_distance(y1, y2; kwargs...)
+    t, S = SPIKE_distance_profile(y1, y2; kwargs...)
     return trapezoid_integral(t, S)/(t[end] - t[1])
 end
 
