@@ -21,7 +21,7 @@ vanRossum(u, v, τ) = sqrt(vR_ds(u, u, τ) + vR_ds(v, v, τ) - 2vR_ds(u, v, τ))
 function vR_ds(u, v, τ) # vanRossum double sum
     s = 0.0
     @inbounds @fastmath for i in 1:length(u), j in 1:length(v)
-        s += exp(- abs(u[j] - v[i])/τ)
+        s += exp(- abs(u[i] - v[j])/τ)
     end
     return s
 end
