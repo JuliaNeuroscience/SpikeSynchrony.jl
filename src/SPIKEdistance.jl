@@ -24,6 +24,7 @@ function SPIKE_distance_profile(y1, y2;
         tf = max(y1[end], y2[end]) + 1,
     )
     @assert issorted(y1) && issorted(y2)
+    @assert y1 == unique(y1) && y2 == unique(y2)
     y1 = copy(y1); y2 = copy(y2)
     # Add auxilary spikes:
     y1[1] != t0 && pushfirst!(y1, t0)
