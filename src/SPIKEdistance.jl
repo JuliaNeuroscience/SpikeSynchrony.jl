@@ -3,11 +3,7 @@ Julia implementation of the SPIKE distance, from the description of the Scholarp
 http://www.scholarpedia.org/article/SPIKE-distance and the paper
 Kreuz et al. (2013), [Monitoring spike train synchrony](https://doi.org/10.1152/jn.00873.2012)
 
-Implementation by Geoge Datseris. It assumes sorted input spike trains and
-at the moment is only for a single pair.
-
-I am assuming that S(t) is a continuous function... In the Python code this
-is not the case. But why?!
+Implementation by Geoge Datseris.
 =#
 export SPIKE_distance_profile, SPIKE_distance
 
@@ -16,28 +12,37 @@ export SPIKE_distance_profile, SPIKE_distance
 Calculate the SPIKE distance profile function ``S(t)``, Eq. (19) of [1], given input
 spike trains `y1, y2`. Return `t, S(t)`.
 
-The keywords `t0 = min(y1[1], y2[1]) - oneunit(T)` and
-`t_end = max(y1[end], y2[end]) + oneunit(T)` add auxilary spikes to both trains
-at these times, as demanded by the algorithm.
+The keywords `t0 = min(y1[1], y2[1]) - 1` and
+`tf = max(y1[end], y2[end]) + 1` add auxilary spikes to both trains
+at these times, as demanded by the algorithm. (Auxilary spikes are only added
+in case `y1, y2` do not start or end with the given `t0, tf`)
 
 [1] : Kreuz et al. (2013), [Monitoring spike train synchrony](https://doi.org/10.1152/jn.00873.2012)
 """
-function SPIKE_distance_profile(y1::AbstractVector{T}, y2::AbstractVector{T};
-    t0 = min(y1[1], y2[1]) - oneunit(T),
-    t_end = max(y1[end], y2[end]) + oneunit(T),
-    ) where {T}
+function SPIKE_distance_profile(y1, y2;
+        t0 = min(y1[1], y2[1]) - 1,
+        tf = max(y1[end], y2[end]) + 1,
+    )
     @assert issorted(y1) && issorted(y2)
+    y1 = copy(y1); y2 = copy(y2)
     # Add auxilary spikes:
-    y1 = vcat(t0, y1, t_end)
-    y2 = vcat(t0, y2, t_end)
-    # initialize appropriate data structures:
-    tvec, indices = _initialize_spike_data(y1, y2)
-    # S are the values of S(t), which is a continuous piecewise linear function
-    S = zeros(Float64, length(tvec))
-    i1, i2 = 1, 1 # indices of the spikes of two spike trains
-    for k in 2:length(tvec)-1 # loop to calculate S[k]
+    y1[1] != t0 && pushfirst!(y1, t0)
+    y2[1] != t0 && pushfirst!(y2, t0)
+    y1[end] != tf && push!(y1, tf)
+    y2[end] != tf && push!(y2, tf)
+    tvec, indices = _initialize_SPIKE_data(y1, y2)
+    # S are the values of S(t), for t ∈ tvec.
+    # Its values are only stored exactly before and exactly on a spike
+    # (as only these values are need for the full S(t)) function)
+    S⁻ = zeros(Float64, length(tvec))
+    S⁺ = zeros(Float64, length(tvec))
+    i1, i2 = 1, 1 # indices of the previous spike for each train
+    for k in 2:length(tvec)-1
         t = tvec[k]
-        # find out which indices to increment (where is current spike from)
+        # First compute S given at the time of the next spike, but before
+        # being exactly ON the spike
+        S⁻[k] = _compute_S(t, y1, y2, i1, i2)
+        # Then find out which indices to increment (where is current spike from)
         if indices[k] == 3 # both trains share current spike
             i1 += 1; i2 += 1
         elseif indices[k] == 1 # current spike from train 1
@@ -45,21 +50,35 @@ function SPIKE_distance_profile(y1::AbstractVector{T}, y2::AbstractVector{T};
         else # current spike from train 2
             i2 += 1
         end
-        # Because of the way `tvec` and `indices` are defined,
-        # this is guaranteed to be correct from the data preperation:
-        tP1 = y1[i1]; tP2 = y2[i2]
-        tF1 = y1[i1+1]; tF2 = y2[i2+1]
-        xISI1, xISI2 = tF1 - tP1, tF2 - tP2
-        xP1 = t - tP1; xP2 = t - tP2
-        xF1 = tF1 - t; xF2 = tF2 - t
-        # Find Δt:
-        ΔtP1 = minimum_Δt(tP1, y2, i2); ΔtP2 = minimum_Δt(tP2, y1, i1)
-        ΔtF1 = minimum_Δt(tF1, y2, i2); ΔtF2 = minimum_Δt(tF2, y1, i1)
-        # Compute S1, S2, S[k]
-        S1 = (ΔtP1*xF1 + ΔtF1*xP1)/xISI1; S2 = (ΔtP2*xF2 + ΔtF2*xP2)/xISI2
-        S[k] = 0.5*(S1*xISI2 + S2*xISI1)/(xISI1 + xISI2)^2
+        # Then compute S exactly ON the current spike
+        S⁺[k] = _compute_S(t, y1, y2, i1, i2)
     end
+    tvec = sort!(vcat(tvec, tvec)) # duplicate time vector
+    S = zeros(length(tvec))
+    S[1:2:end] .= S⁻
+    S[2:2:end] .= S⁺
     return tvec, S
+end
+
+"""
+Core computatation for  ``S(t)`` at time ``t``. Whether we are exactly
+before or exactly on top of a spike is taken care of by `i1, i2`.
+"""
+function _compute_S(t, y1, y2, i1, i2)
+    # Because of the way `_initialize_SPIKE_data` works,
+    # this is guaranteed to be correct from the data preperation:
+    tP1 = y1[i1]; tP2 = y2[i2]
+    tF1 = y1[i1+1]; tF2 = y2[i2+1]
+    xISI1 = tF1 - tP1;  xISI2 = tF2 - tP2
+    xP1 = t - tP1; xP2 = t - tP2
+    xF1 = tF1 - t; xF2 = tF2 - t
+    # Find Δt:
+    ΔtP1 = minimum_Δt(tP1, y2, i2); ΔtF1 = minimum_Δt(tF1, y2, i2);
+    ΔtP2 = minimum_Δt(tP2, y1, i1); ΔtF2 = minimum_Δt(tF2, y1, i1)
+    # Compute S1, S2, S[k]
+    S1 = (ΔtP1*xF1 + ΔtF1*xP1)/xISI1; S2 = (ΔtP2*xF2 + ΔtF2*xP2)/xISI2
+    S = 2(S1*xISI2 + S2*xISI1)/(xISI1 + xISI2)^2
+    return S
 end
 
 """
@@ -67,7 +86,8 @@ Create smart containers for the time vector (that has ALL spikes sorted) as
 well as the indices of where each spike comes from. This allows for exceptionally
 simplified source code for the SPIKE distance profile ``S(t)``.
 """
-function _initialize_spike_data(y1::AbstractVector{T}, y2) where {T}
+function _initialize_SPIKE_data(y1::AbstractVector{T1}, y2::AbstractVector{T2}) where {T1, T2}
+    T = promote_type(T1, T2)
     tvec = Vector{T}()
     indices = Vector{Int8}()
     i1 = i2 = 1 # indices of the spike trains
@@ -84,7 +104,7 @@ function _initialize_spike_data(y1::AbstractVector{T}, y2) where {T}
             i2 += 1
         end
     end
-    # @assert tvec == sort!(unique(vcat(y1, y2)))
+    @assert tvec == sort!(unique(vcat(y1, y2)))
     return tvec, indices
 end
 
