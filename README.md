@@ -28,3 +28,6 @@ The following software, implemented in other languages, have much more functiona
 3. [cSpike](http://wwwold.fi.isc.cnr.it/users/thomas.kreuz/Source-Code/cSPIKE.html) : MATLAB with MEX C++ backends
 
 *(If you know more, add them here via a PR)*
+
+## Acknowledgements
+I would like to thank [Thomas Kreuz](http://wwwold.fi.isc.cnr.it/users/thomas.kreuz/) for support regarding the implementations here, as well as useful discussions.
