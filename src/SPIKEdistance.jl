@@ -73,10 +73,8 @@ function _compute_S(t, y1, y2, i1, i2)
     xISI1 = tF1 - tP1;  xISI2 = tF2 - tP2
     xP1 = t - tP1; xP2 = t - tP2
     xF1 = tF1 - t; xF2 = tF2 - t
-    # Find Δt:
     ΔtP1 = minimum_Δt(tP1, y2, i2); ΔtF1 = minimum_Δt(tF1, y2, i2);
     ΔtP2 = minimum_Δt(tP2, y1, i1); ΔtF2 = minimum_Δt(tF2, y1, i1)
-    # Compute S1, S2, S[k]
     S1 = (ΔtP1*xF1 + ΔtF1*xP1)/xISI1; S2 = (ΔtP2*xF2 + ΔtF2*xP2)/xISI2
     S = 2(S1*xISI2 + S2*xISI1)/(xISI1 + xISI2)^2
     return S
