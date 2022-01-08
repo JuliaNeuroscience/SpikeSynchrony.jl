@@ -38,7 +38,7 @@ function SPIKE_distance_profile(y1, y2;
     S⁻ = zeros(Float64, length(tvec))
     S⁺ = zeros(Float64, length(tvec))
     i1, i2 = 1, 1 # indices of the previous spike for each train
-    @inbounds for k in 2:length(tvec)-1
+    for k in 2:length(tvec)-1
         t = tvec[k]
         # First compute S given at the time of the next spike, but before
         # being exactly ON the spike
