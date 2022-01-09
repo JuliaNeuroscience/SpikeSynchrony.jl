@@ -1,7 +1,7 @@
 name = "SpikeSynchrony"
 uuid = "3713708d-6816-4a57-846e-904b81e02fa1"
 authors = ["George Datseris <datseris.george@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [compat]
 julia = "1.2"
