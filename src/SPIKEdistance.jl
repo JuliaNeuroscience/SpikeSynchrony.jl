@@ -13,8 +13,8 @@ Calculate the SPIKE distance profile function ``S(t)``, Eq. (19) of [1], given i
 spike trains `y1, y2`. Return `t, S(t)`.
 
 The keywords `t0 = min(y1[1], y2[1]) - 1` and
-`tf = max(y1[end], y2[end]) + 1` add auxilary spikes to both trains
-at these times, as demanded by the algorithm. (Auxilary spikes are only added
+`tf = max(y1[end], y2[end]) + 1` add auxiliary spikes to both trains
+at these times, as demanded by the algorithm. (Auxiliary spikes are only added
 in case `y1, y2` do not start or end with the given `t0, tf`)
 
 [1] : Kreuz et al. (2013), [Monitoring spike train synchrony](https://doi.org/10.1152/jn.00873.2012)
@@ -62,12 +62,12 @@ function SPIKE_distance_profile(y1, y2;
 end
 
 """
-Core computatation for  ``S(t)`` at time ``t``. Whether we are exactly
+Core computation for  ``S(t)`` at time ``t``. Whether we are exactly
 before or exactly on top of a spike is taken care of by `i1, i2`.
 """
 function _compute_S(t, y1, y2, i1, i2)
     # Because of the way `_initialize_SPIKE_data` works,
-    # this is guaranteed to be correct from the data preperation:
+    # this is guaranteed to be correct from the data preparation:
     tP1 = y1[i1]; tP2 = y2[i2]
     tF1 = y1[i1+1]; tF2 = y2[i2+1]
     xISI1 = tF1 - tP1;  xISI2 = tF2 - tP2
