@@ -7,7 +7,7 @@ SpikeSynchrony.jl has a clear, small and easy-to-understand source code, which c
 To install, press `]` in the Julia console to enter package mode and then
 do
 ```
-add https://github.com/Datseris/SpikeSynchrony.jl
+add SpikeSynchrony
 ```
 
 To use it in your Julia sessions, do `using SpikeSynchrony`.
